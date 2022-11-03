@@ -3,6 +3,7 @@
 const express = require("express");
 const crypto = require("crypto");
 const axios = require('axios');
+const EventEmitter = require('node:events');
 const { workerData } = require("worker_threads");
 
 const rateLimitFunction = (time) => new Promise((r, q) => setTimeout(r, time));
@@ -43,7 +44,7 @@ class Token {
 
 
 // 라이브러리 매인 클래스
-class EST {
+class EST extends EventEmitter{
     constructor (id, secret, options = {}){
         if ( EST._instance ) return EST._instance;
         EST._instance = this;
@@ -139,19 +140,21 @@ class EST {
 
                 switch (headers["twitch-eventsub-message-type"]) {
                     case "notification":
+                        _this.emit("log", `Received notification for type ${body.subscription.type}`);
                         // logger.log(`Received notification for type ${body.subscription.type}`);
                         _this.eventQueue.recentMessageIds[messageId] = true;
                         setTimeout(() => delete _this.eventQueue.recentMessageIds[messageId], 601000);
                         // EventManager.fire(body.subscription, body.event);
                         break;
                     case "revocation": // 이벤트 등록 에러
-                        // logger.log(`Received revocation notification for subscription id ${body.subscription.id}`);
+                        _this.emit("log", `Received revocation notification for subscription id ${body.subscription.id}`);
                         _this.eventQueue.recentMessageIds[messageId] = true;
                         setTimeout(() => delete _this.eventQueue.recentMessageIds[messageId] , 601000);
+                        _this.emit('')
                         // EventManager.fire({ ...body.subscription, type: "revocation" }, body.subscription);
                         break;
                     default:
-                        // logger.log(`Received request with unhandled message type ${headers["twitch-eventsub-message-type"]}`);
+                        _this.emit("log", `Received request with unhandled message type ${headers["twitch-eventsub-message-type"]}`);
                         break;
                 }
 
